@@ -35,12 +35,12 @@ Cheaper stages come first and act as filters — only candidates who pass procee
 
 Each candidate accumulates scores as they move through stages. A `null` score means the candidate has not yet reached that stage. The final `outcome` is the single signal the model learns from.
 
-| candidate_id | s0_score | s1_score | s2_score | s3_score | outcome |
-|---|---|---|---|---|---|
-| C001 | 72 | 65 | null | null | 0 |
-| C002 | 88 | 91 | 84 | 90 | 4.5 |
-| C003 | 45 | null | null | null | 0 |
-| C007 | 79 | 82 | 80 | 88 | 3.2 (mean) |
+| candidate_id | s0_score | s1_score | s2_score | s3_score | ground_truth_hire | outcome |
+|---|---|---|---|---|---|---|
+| C001 | 72 | 65 | null | null | 0 | 0 |
+| C002 | 88 | 91 | 84 | 90 | 1 | 1 |
+| C003 | 45 | null | null | null | 0 | 0 |
+| C007 | 79 | 82 | 80 | 88 | 0 | 0 |
 
 ### Decision at Each Stage
 
@@ -56,34 +56,32 @@ The optimal decision depends on:
 
 ### What "Best" Means
 
-The model uses a single `outcome` score per candidate:
+Each candidate has a hidden `true_quality` score the algorithm never sees. The top 25% by true quality are labelled as truly good — these are the candidates the company actually wants to hire.
+
+The outcome is binary:
 
 ```
-hired + performance score available  →  outcome = performance score
-hired + no performance score yet     →  outcome = mean performance score of all reviewed employees
-not hired                            →  outcome = 0
+hired AND truly good  →  outcome = 1
+otherwise             →  outcome = 0
 ```
-
-If the company tracks post-hire performance (e.g. manager review after 6 months, rated 1-5), that becomes the outcome directly. If not yet available, we use the mean across reviewed employees as a reasonable default — not a guess, but grounded in real data and updated as more reviews come in. The system works with or without performance data.
 
 ### Reward Signal
 
-The bandit learns from a reward computed after each decision:
+The bandit learns from a reward that accounts for both outcome and cost:
 
 ```
-reward = base_outcome - cost_weight × hours_spent
+reward = outcome - cost_weight × hours_spent
 ```
 
-`base_outcome` is the outcome above **if the algorithm hired the candidate**, or 0 if the algorithm rejected them — regardless of what the true outcome might have been.
-
-| situation | base | hours spent | reward (cost_weight=0.1) |
+| situation | outcome | hours spent | reward (cost_weight=0.1) |
 |---|---|---|---|
 | rejected at s0 | 0 | 1 | −0.1 |
 | rejected at s3 | 0 | 27 | −2.7 |
-| hired, score=4.2 | 4.2 | 27 | +1.5 |
-| hired, score=1.5 | 1.5 | 27 | −1.2 |
+| hired, not truly good | 0 | 27 | −2.7 |
+| hired, truly good | 1 | 27 | −1.7 |
+| hired, truly good | 1 | 4 | +0.6 |
 
-With `cost_weight=0` the algorithm is cost-blind — it only cares about hire quality. With higher values it learns to reject weak candidates earlier rather than letting them reach expensive stages. The last row shows the key insight: a mediocre hire after many expensive stages can produce a negative reward, teaching the algorithm that rejecting earlier was better.
+The last two rows show the key tension: hiring a good candidate through all stages is still costly. The algorithm learns to identify good candidates early so they can be advanced quickly, and bad candidates even earlier so they can be rejected cheaply.
 
 ---
 

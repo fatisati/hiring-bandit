@@ -4,6 +4,14 @@ The algorithm is evaluated in the online phase only. Every 10 candidates (one ba
 
 ---
 
+## Ground Truth
+
+Each candidate has a hidden `true_quality` score the algorithm never sees. The top 25% of candidates by true quality are labelled `ground_truth_hire = 1` — these are the people the company actually wants to hire.
+
+The algorithm only sees noisy stage scores. Its job is to identify the top 25% using those scores alone.
+
+---
+
 ## Metrics
 
 ### Precision
@@ -13,7 +21,7 @@ The algorithm is evaluated in the online phase only. Every 10 candidates (one ba
 precision = correct_hires / total_hires
 ```
 
-Low precision means the algorithm is advancing weak candidates all the way through — wasting expensive stage time on people who shouldn't have been hired.
+Low precision = advancing weak candidates through expensive stages.
 
 ### Recall
 > Of all the truly good candidates, how many did we hire?
@@ -22,22 +30,20 @@ Low precision means the algorithm is advancing weak candidates all the way throu
 recall = correct_hires / truly_good_candidates
 ```
 
-Low recall means the algorithm is rejecting good candidates too early — setting thresholds too high and missing people who would have performed well.
+Low recall = thresholds too strict, missing good candidates early.
 
 ### Cost per Hire
-> How many hours of interviewer time did we spend per successful hire?
+> Hours of interviewer time spent per successful hire.
 
 ```
 cost_per_hire = total_hours_spent / total_hires
 ```
 
-This includes the cost of rejected candidates — every stage they passed through before being rejected is real time spent. Rejecting weak candidates earlier directly reduces this number.
+Includes cost of rejected candidates — every stage they passed before rejection costs real hours.
 
 ---
 
 ## What to Look For
-
-A well-functioning algorithm shows all three metrics improving over batches and flattening as it converges:
 
 | phase | precision | recall | cost/hire |
 |---|---|---|---|
@@ -45,24 +51,22 @@ A well-functioning algorithm shows all three metrics improving over batches and 
 | mid batches | rising | rising | falling |
 | late batches | stable | stable | stable |
 
-If they don't converge, consider increasing `N_HISTORICAL` (more warm start data) or tuning `--exploration`.
+If metrics don't converge, try increasing `N_HISTORICAL` or tuning `--exploration`.
 
 ---
 
 ## The Precision–Recall Tradeoff
 
-Precision and recall pull in opposite directions:
-
-- **Raise thresholds** → hire fewer, but more selectively → precision up, recall down
+- **Raise thresholds** → hire fewer, more selectively → precision up, recall down
 - **Lower thresholds** → hire more broadly → recall up, precision down
 
-The algorithm balances this automatically via UCB. The `--cost-weight` parameter shifts the balance:
+The `--cost-weight` parameter shifts the balance:
 
 | `cost_weight` | effect |
 |---|---|
-| 0.0 | cost-blind — optimises hire quality only, thresholds may stay loose |
-| 0.1 (default) | mild cost pressure — pushes thresholds up, earlier rejection |
-| high | aggressive cost cutting — high precision, low recall, low cost |
+| 0.0 | cost-blind — optimises hire quality only |
+| 0.1 (default) | mild cost pressure — pushes toward earlier rejection |
+| high | aggressive cost cutting — high precision, low recall |
 
 ---
 
@@ -71,20 +75,13 @@ The algorithm balances this automatically via UCB. The `--cost-weight` parameter
 ```
  batch |  seen |  precision |  recall | total cost | cost/hire
 ------------------------------------------------------------------
-     0 |    10 |       0.50 |    0.33 |        87.0 |      29.0
-     1 |    10 |       0.67 |    0.44 |        72.0 |      24.0
-     2 |    10 |       0.75 |    0.60 |        61.0 |      20.3
+     0 |    10 |       0.50 |    0.33 |       87.0 |      29.0
+     1 |    10 |       0.67 |    0.44 |       72.0 |      24.0
+     2 |    10 |       0.75 |    0.60 |       61.0 |      20.3
 ```
 
-- `batch` — batch number (0-indexed)
-- `seen` — candidates processed in this batch
-- `total cost` — hours spent on all candidates in the batch (hired + rejected)
-- `cost/hire` — total cost divided by number of hires this batch
+- `batch` — group of 10 online candidates, in arrival order
+- `total cost` — hours spent on all 10 candidates (hired + rejected)
+- `cost/hire` — total cost divided by number of hires in this batch
 
-Total cost falling while precision rises is the signal the algorithm is working: it's rejecting the right people early and advancing the right people through.
-
----
-
-## Ground Truth
-
-`ground_truth_hire = 1` if a candidate's hidden `true_quality` exceeds the threshold (default 70). The algorithm never sees `true_quality` — it only sees noisy stage scores. This is what makes the problem hard and what the algorithm has to learn from outcomes alone.
+Total cost falling while precision rises = algorithm is working.

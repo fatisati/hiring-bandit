@@ -38,7 +38,7 @@ def main():
     parser = argparse.ArgumentParser(description="Run hiring pipeline optimization")
     parser.add_argument("--data", default=DEFAULT_DATA_PATH, help="Path to candidates CSV")
     parser.add_argument("--exploration", type=float, default=1.0, help="UCB exploration constant")
-    parser.add_argument("--cost-weight", type=float, default=0.0, help="Penalty per hour spent (0 = cost blind)")
+    parser.add_argument("--cost-weight", type=float, default=0.1, help="Penalty per hour spent (0 = cost blind)")
     parser.add_argument("--batch-size", type=int, default=10, help="Evaluation batch size")
     args = parser.parse_args()
 

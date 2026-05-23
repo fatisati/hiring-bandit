@@ -5,6 +5,7 @@ A system to find the best candidates through a multi-stage interview pipeline wh
 ## Docs
 
 - [Algorithm](docs/algorithm.md) — implementation details, UCB formula, full loop
+- [Evaluation](docs/evaluation.md) — metrics, how to read the report, precision/recall tradeoff
 - [Data Generation](docs/data_generation.md) — how to generate synthetic candidate data
 
 ## Problem

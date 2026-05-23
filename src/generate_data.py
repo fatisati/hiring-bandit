@@ -24,8 +24,8 @@ THRESHOLDS = {
     "s3": 75,
 }
 
-# How many candidates the company wants to hire from the full pool
-N_TARGET_HIRES = 10
+# Fraction of the candidate pool that are truly good
+TOP_PERCENTILE = 0.25
 
 N_HISTORICAL = 50
 BATCH_SIZE = 10
@@ -77,9 +77,9 @@ def generate_dataset(n=200, n_stages=4, seed=42):
         for i in range(n)
     ]
 
-    # Ground truth: top N_TARGET_HIRES candidates by true quality
+    # Ground truth: top TOP_PERCENTILE of candidates by true quality
     sorted_qualities = sorted([r["true_quality"] for r in candidates], reverse=True)
-    gt_threshold = sorted_qualities[N_TARGET_HIRES - 1]
+    gt_threshold = sorted_qualities[int(len(candidates) * TOP_PERCENTILE)]
 
     for r in candidates:
         r["ground_truth_hire"] = int(r["true_quality"] >= gt_threshold)

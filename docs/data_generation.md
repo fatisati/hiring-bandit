@@ -10,6 +10,16 @@ Saves 200 candidates to `data/candidates.csv`.
 
 ---
 
+## Historical vs Online Phase
+
+Candidates are split by arrival order:
+
+- **Historical** (first 50) — represent the company's past hiring record. Hiring decisions were made using fixed thresholds (60, 65, 70, 75) — a naive baseline policy. The algorithm uses these records to warm start: it learns which scores at each stage correlated with good outcomes, without having made the decisions itself.
+
+- **Online** (remaining 150) — the algorithm makes its own decisions in real time, updating its thresholds after each candidate.
+
+---
+
 ## Customize
 
 Edit the constants at the top of `src/generate_data.py`:

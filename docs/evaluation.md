@@ -85,3 +85,19 @@ The `--cost-weight` parameter shifts the balance:
 - `cost/hire` — total cost divided by number of hires in this batch
 
 Total cost falling while precision rises = algorithm is working.
+
+---
+
+## Baseline
+
+Before running the online algorithm, measure the **naive policy** — the fixed thresholds (60, 65, 70, 75) used during data generation. This is what the company was doing before learning began.
+
+The notebook prints these metrics before the online phase starts. Use them as the floor: the algorithm should exceed this baseline in precision and recall while reducing cost per hire.
+
+---
+
+## Ground Truth
+
+`ground_truth_hire = 1` for the top 25% of candidates by `true_quality`. The algorithm never sees `true_quality` — it only sees noisy stage scores.
+
+Precision and recall are computed by comparing the algorithm's decisions against this hidden ground truth. This is standard offline evaluation: ground truth is used only by the evaluator, never by the algorithm. The algorithm learns purely from `outcome` (1 if it hired a truly good candidate, 0 otherwise).

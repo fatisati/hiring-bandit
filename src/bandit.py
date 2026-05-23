@@ -4,7 +4,7 @@ import numpy as np
 class ThresholdBandit:
     """UCB-based threshold learner for a single pipeline stage."""
 
-    def __init__(self, min_score=0, max_score=100, n_bins=20, exploration=1.0):
+    def __init__(self, min_score=0, max_score=100, n_bins=10, exploration=0.1):
         self.bins = np.linspace(min_score, max_score, n_bins)
         self.exploration = exploration
         self.counts = np.zeros(n_bins)
@@ -34,7 +34,7 @@ class ThresholdBandit:
 class HiringPipeline:
     """Runs candidates through stages using per-stage bandit thresholds."""
 
-    def __init__(self, stage_costs: dict, exploration=1.0, cost_weight=0.0):
+    def __init__(self, stage_costs: dict, exploration=0.1, cost_weight=0.0):
         self.stages = list(stage_costs.keys())
         self.stage_costs = stage_costs
         self.cost_weight = cost_weight

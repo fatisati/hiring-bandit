@@ -216,10 +216,10 @@ Over time threshold 70 stays negative (cost of rejecting adds up, no hires), thr
 
 | parameter | default | where to set | effect |
 |---|---|---|---|
-| `--exploration` | 1.0 | CLI | UCB exploration constant. Higher = spends more time testing uncertain thresholds. Lower = commits faster to current best. 1.0 is the standard starting point. |
+| `--exploration` | 0.1 | CLI | UCB exploration constant. Higher = spends more time testing uncertain thresholds. Lower = commits faster to current best. With binary 0/1 rewards, keep this well below 1.0 — otherwise the uncertainty bonus drowns out the reward signal and the algorithm never settles. |
 | `--cost-weight` | 0.01 | CLI | Penalty per hour spent on a candidate. 0 = cost-blind. 0.01 (default) = mild pressure to reject early while keeping a good hire profitable (+0.73 reward). Too high (≥0.04) = even good hires get negative reward, causing the algorithm to reject everyone. |
 | `--batch-size` | 10 | CLI | How many online candidates per evaluation report. Does not affect learning. |
-| `n_bins` | 20 | `bandit.py` | Number of discrete threshold values per stage (spread evenly from 0–100). Finer resolution needs more data to converge. |
+| `n_bins` | 10 | `bandit.py` | Number of discrete threshold values per stage (spread evenly from 0–100). Fewer bins = more data per arm = faster convergence. 10 bins gives ~11-point resolution across the 0–100 score range. |
 | `N_HISTORICAL` | 50 | `generate_data.py` | How many candidates go into the warm start phase. More = better initialized bandits, fewer candidates left for online learning. |
 
 The two that matter most in practice are `--exploration` and `--cost-weight`. Everything else can stay at its default.

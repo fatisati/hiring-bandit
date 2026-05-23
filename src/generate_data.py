@@ -2,15 +2,6 @@ import random
 import csv
 import os
 
-# Stage thresholds — candidates must score above these to advance
-THRESHOLDS = {
-    "s0": 60,
-    "s1": 65,
-    "s2": 70,
-    "s3": 75,
-}
-
-# Stage costs in hours
 STAGE_COSTS = {
     "s0": 1,
     "s1": 3,
@@ -18,7 +9,6 @@ STAGE_COSTS = {
     "s3": 15,
 }
 
-# Noise per stage — later stages are more accurate
 STAGE_NOISE = {
     "s0": 20,
     "s1": 12,
@@ -26,20 +16,18 @@ STAGE_NOISE = {
     "s3": 3,
 }
 
-# A candidate is truly good if their true quality exceeds this
-GROUND_TRUTH_THRESHOLD = 70
+# Thresholds used during data generation to decide who advances
+THRESHOLDS = {
+    "s0": 60,
+    "s1": 65,
+    "s2": 70,
+    "s3": 75,
+}
 
-# Probability that a hired candidate has a performance review yet
-PERFORMANCE_REVIEW_RATE = 0.6
+# How many candidates the company wants to hire from the full pool
+N_TARGET_HIRES = 10
 
-# Initial mean performance score — used before enough reviews exist
-# Updated dynamically once candidates with reviews are generated
-MEAN_PERFORMANCE = 3.2
-
-# Number of historical candidates before online phase begins
 N_HISTORICAL = 50
-
-# Candidates per evaluation batch in the online phase
 BATCH_SIZE = 10
 
 
@@ -61,42 +49,20 @@ def generate_candidate(candidate_id, arrival_order, n_stages=4):
         "batch": batch,
     }
 
-    # Hidden true quality — the algorithm never sees this
     true_quality = random.gauss(65, 15)
     row["true_quality"] = round(true_quality, 1)
-    row["ground_truth_hire"] = int(true_quality >= GROUND_TRUTH_THRESHOLD)
 
-    # Observed scores — noisy views of true quality, noise decreases each stage
     prev_passed = True
     for stage in stages:
         if not prev_passed:
             row[f"{stage}_score"] = None
             continue
-
         observed = noisy_score(true_quality, stage)
         row[f"{stage}_score"] = observed
         prev_passed = observed >= THRESHOLDS[stage]
 
-    # Hired if passed all observed stage thresholds
     hired = prev_passed and row.get(f"{stages[-1]}_score") is not None
     row["hired"] = int(hired)
-
-    # Performance score — only for hired candidates, not always available yet
-    if hired and random.random() < PERFORMANCE_REVIEW_RATE:
-        perf = 1 + (true_quality / 100) * 4 + random.gauss(0, 0.3)
-        row["performance_score"] = round(min(5.0, max(1.0, perf)), 1)
-    else:
-        row["performance_score"] = None
-
-    # Outcome — single target signal for the algorithm
-    if not hired:
-        row["outcome"] = 0.0
-    elif row["performance_score"] is not None:
-        row["outcome"] = row["performance_score"]
-    else:
-        row["outcome"] = MEAN_PERFORMANCE
-
-    # Total cost spent on this candidate
     row["total_cost"] = sum(
         STAGE_COSTS[s] for s in stages if row[f"{s}_score"] is not None
     )
@@ -111,13 +77,13 @@ def generate_dataset(n=200, n_stages=4, seed=42):
         for i in range(n)
     ]
 
-    # Recompute outcome using the actual mean across all reviewed employees
-    reviewed = [r["performance_score"] for r in candidates if r["performance_score"] is not None]
-    mean_perf = sum(reviewed) / len(reviewed) if reviewed else MEAN_PERFORMANCE
+    # Ground truth: top N_TARGET_HIRES candidates by true quality
+    sorted_qualities = sorted([r["true_quality"] for r in candidates], reverse=True)
+    gt_threshold = sorted_qualities[N_TARGET_HIRES - 1]
 
     for r in candidates:
-        if r["hired"] and r["performance_score"] is None:
-            r["outcome"] = round(mean_perf, 2)
+        r["ground_truth_hire"] = int(r["true_quality"] >= gt_threshold)
+        r["outcome"] = float(r["hired"] and r["ground_truth_hire"])
 
     return candidates
 
@@ -159,23 +125,6 @@ def print_summary(data):
 
     metrics(historical, "Historical Phase")
     metrics(online, "Online Phase")
-
-    # Per-batch breakdown for online phase
-    if online:
-        batches = sorted(set(r["batch"] for r in online))
-        print(f"\n--- Online Phase: Per Batch ---")
-        print(f"{'batch':>6} | {'seen':>6} | {'precision':>10} | {'recall':>7} | {'cost/hire':>10}")
-        print("-" * 50)
-        for b in batches:
-            batch_data = [r for r in online if r["batch"] == b]
-            hired = sum(r["hired"] for r in batch_data)
-            truly_good = sum(r["ground_truth_hire"] for r in batch_data)
-            correct = sum(1 for r in batch_data if r["hired"] and r["ground_truth_hire"])
-            cost = sum(r["total_cost"] for r in batch_data)
-            precision = correct / hired if hired else 0
-            recall = correct / truly_good if truly_good else 0
-            cost_per_hire = cost / hired if hired else 0
-            print(f"{b:>6} | {len(batch_data):>6} | {precision:>10.2f} | {recall:>7.2f} | {cost_per_hire:>10.1f}")
 
 
 if __name__ == "__main__":

@@ -7,7 +7,6 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 from bandit import HiringPipeline
 from evaluate import Evaluator
-from generate_data import MEAN_PERFORMANCE
 
 STAGE_COSTS = {"s0": 1, "s1": 3, "s2": 8, "s3": 15}
 DEFAULT_DATA_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "candidates.csv")
@@ -28,7 +27,7 @@ def load_data(path):
                 elif key in ("arrival_order", "hired", "ground_truth_hire", "batch"):
                     row[key] = int(row[key]) if row[key] is not None else None
                 elif key in ("s0_score", "s1_score", "s2_score", "s3_score",
-                             "true_quality", "outcome", "total_cost", "performance_score"):
+                             "true_quality", "outcome", "total_cost"):
                     row[key] = float(row[key]) if row[key] is not None else None
             data.append(row)
     return data
@@ -52,28 +51,10 @@ def main():
     print(f"Warm starting on {len(historical)} historical candidates...")
     pipeline.warm_start(historical)
 
-    # seed running mean from historical reviews already observed
-    reviewed_scores = [
-        c["performance_score"]
-        for c in historical
-        if c["hired"] and c["performance_score"] is not None
-    ]
-
     print(f"Running online phase on {len(online)} candidates...")
     for candidate in online:
         result = pipeline.process(candidate)
-
-        # track new reviews as they come in
-        if result["hired"] and candidate["performance_score"] is not None:
-            reviewed_scores.append(candidate["performance_score"])
-
-        # resolve outcome: use actual score if available, else running mean
-        if candidate["performance_score"] is not None:
-            outcome = candidate["performance_score"]
-        else:
-            outcome = sum(reviewed_scores) / len(reviewed_scores) if reviewed_scores else MEAN_PERFORMANCE
-
-        reward = pipeline.compute_reward(result, outcome)
+        reward = pipeline.compute_reward(result, candidate["outcome"])
         pipeline.update(result["thresholds"], result["visited_stages"], reward)
         evaluator.record(candidate, result)
 

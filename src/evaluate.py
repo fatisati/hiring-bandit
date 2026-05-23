@@ -46,12 +46,30 @@ class Evaluator:
             self.batches.append(self._current)
             self._current = BatchMetrics(batch=len(self.batches))
 
+    def cumulative(self):
+        """Running totals across all batches seen so far."""
+        hired, correct, truly_good, cost = 0, 0, 0, 0.0
+        rows = []
+        for m in self.batches:
+            hired      += m.hired
+            correct    += m.correct_hires
+            truly_good += m.truly_good
+            cost       += m.total_cost
+            rows.append({
+                "batch":          m.batch,
+                "precision":      correct / hired      if hired      else None,
+                "recall":         correct / truly_good if truly_good else None,
+                "cost_per_hire":  cost    / hired      if hired      else None,
+            })
+        return rows
+
     def print_report(self):
         print(f"\n{'batch':>6} | {'seen':>5} | {'precision':>10} | {'recall':>7} | {'total cost':>11} | {'cost/hire':>10}")
         print("-" * 66)
         for m in self.batches:
+            cph = f"{m.cost_per_hire:>10.1f}" if m.hired else f"{'N/A':>10}"
             print(
                 f"{m.batch:>6} | {m.candidates:>5} | "
                 f"{m.precision:>10.2f} | {m.recall:>7.2f} | "
-                f"{m.total_cost:>11.1f} | {m.cost_per_hire:>10.1f}"
+                f"{m.total_cost:>11.1f} | {cph}"
             )

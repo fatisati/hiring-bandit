@@ -70,6 +70,10 @@ class HiringPipeline:
 
     def warm_start(self, historical: list):
         for candidate in historical:
+            if not candidate.get("hired"):
+                # Rejected candidates have outcome=0 due to the old policy, not quality.
+                # Including them would teach the bandit that advancing candidates is bad.
+                continue
             result = self.process(candidate)
             reward = self.compute_reward(result, candidate["outcome"])
             self.update(result["thresholds"], result["visited_stages"], reward)

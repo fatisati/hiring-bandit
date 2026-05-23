@@ -73,15 +73,15 @@ The bandit learns from a reward that accounts for both outcome and cost:
 reward = outcome - cost_weight × hours_spent
 ```
 
-| situation | outcome | hours spent | reward (cost_weight=0.1) |
+| situation | outcome | hours spent | reward (cost_weight=0.01) |
 |---|---|---|---|
-| rejected at s0 | 0 | 1 | −0.1 |
-| rejected at s3 | 0 | 27 | −2.7 |
-| hired, not truly good | 0 | 27 | −2.7 |
-| hired, truly good | 1 | 27 | −1.7 |
-| hired, truly good | 1 | 4 | +0.6 |
+| rejected at s0 | 0 | 1 | −0.01 |
+| rejected at s3 | 0 | 27 | −0.27 |
+| hired, not truly good | 0 | 27 | −0.27 |
+| hired, truly good | 1 | 27 | **+0.73** |
+| hired, truly good | 1 | 4 | **+0.96** |
 
-The last two rows show the key tension: hiring a good candidate through all stages is still costly. The algorithm learns to identify good candidates early so they can be advanced quickly, and bad candidates even earlier so they can be rejected cheaply.
+A successful hire is always positive. The cost term creates mild pressure to identify and advance good candidates early — rather than routing everyone through all four expensive stages.
 
 ---
 
@@ -217,7 +217,7 @@ Over time threshold 70 stays negative (cost of rejecting adds up, no hires), thr
 | parameter | default | where to set | effect |
 |---|---|---|---|
 | `--exploration` | 1.0 | CLI | UCB exploration constant. Higher = spends more time testing uncertain thresholds. Lower = commits faster to current best. 1.0 is the standard starting point. |
-| `--cost-weight` | 0.0 | CLI | Penalty per hour spent on a candidate. 0 = cost-blind (maximize hire quality only). 0.1 = mild pressure to reject early. Too high = rejects almost everyone at s0. |
+| `--cost-weight` | 0.01 | CLI | Penalty per hour spent on a candidate. 0 = cost-blind. 0.01 (default) = mild pressure to reject early while keeping a good hire profitable (+0.73 reward). Too high (≥0.04) = even good hires get negative reward, causing the algorithm to reject everyone. |
 | `--batch-size` | 10 | CLI | How many online candidates per evaluation report. Does not affect learning. |
 | `n_bins` | 20 | `bandit.py` | Number of discrete threshold values per stage (spread evenly from 0–100). Finer resolution needs more data to converge. |
 | `N_HISTORICAL` | 50 | `generate_data.py` | How many candidates go into the warm start phase. More = better initialized bandits, fewer candidates left for online learning. |

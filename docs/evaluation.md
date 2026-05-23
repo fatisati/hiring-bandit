@@ -73,8 +73,8 @@ The `--cost-weight` parameter shifts the balance:
 | `cost_weight` | effect |
 |---|---|
 | 0.0 | cost-blind — optimises hire quality only |
-| 0.1 (default) | mild cost pressure — pushes toward earlier rejection |
-| high | aggressive cost cutting — high precision, low recall |
+| 0.01 (default) | mild cost pressure — a good hire through all stages still earns +0.73 reward |
+| ≥ 0.04 | good hires through all stages turn negative — algorithm learns to reject everyone early; recall collapses |
 
 ---
 

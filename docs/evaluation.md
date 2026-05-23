@@ -1,14 +1,16 @@
 # Evaluation
 
-The algorithm is evaluated in the online phase only. Every 10 candidates (one batch), three metrics are computed.
+The algorithm is evaluated in the online phase only. Every 10 candidates (one batch), three metrics are computed and compared against hidden ground truth the algorithm never sees. This is standard **offline evaluation** — the same approach used in industry for recommendation systems, ad ranking, and hiring tools.
 
 ---
 
-## Ground Truth
+## Offline Evaluation
 
-Each candidate has a hidden `true_quality` score the algorithm never sees. The top 25% of candidates by true quality are labelled `ground_truth_hire = 1` — these are the people the company actually wants to hire.
+The algorithm makes decisions using only what it observes: noisy stage scores and outcomes of its own hiring decisions (`outcome = 1` if it hired a truly good candidate, `0` otherwise).
 
-The algorithm only sees noisy stage scores. Its job is to identify the top 25% using those scores alone.
+A separate evaluation layer compares those decisions against `ground_truth_hire` — the top 25% of candidates by hidden `true_quality`. The algorithm never sees this. Precision and recall are computed externally, purely to judge how well the policy is working.
+
+This separation is intentional and best practice. If the algorithm could see ground truth during learning, it would be training on the very signal it is being evaluated against — making evaluation meaningless.
 
 ---
 
@@ -43,15 +45,21 @@ Includes cost of rejected candidates — every stage they passed before rejectio
 
 ---
 
-## What to Look For
+## Expected Trends
 
-| phase | precision | recall | cost/hire |
-|---|---|---|---|
-| early batches | low — still exploring | low — thresholds not calibrated | high — rejecting late |
-| mid batches | rising | rising | falling |
-| late batches | stable | stable | stable |
+As the algorithm learns, you should expect:
 
-If metrics don't converge, try increasing `N_HISTORICAL` or tuning `--exploration`.
+| metric | expected trend | why |
+|---|---|---|
+| precision | improving | bandit finds thresholds that filter out weak candidates |
+| recall | improving (if `cost_weight` is low) | bandit stops missing good candidates |
+| cost per hire | decreasing | weak candidates rejected earlier at cheaper stages |
+
+**Important caveats:**
+- Trends are not monotonic — early batches are noisy while the bandit is still exploring
+- With binary outcomes (0/1), convergence is slower than with continuous reward signals
+- The algorithm may briefly perform worse than the naive baseline before improving
+- Higher `cost_weight` trades recall for lower cost — recall may decrease as the algorithm learns to reject more aggressively
 
 ---
 
@@ -70,6 +78,14 @@ The `--cost-weight` parameter shifts the balance:
 
 ---
 
+## Baseline
+
+Before running the online algorithm, measure the **naive policy** — the fixed thresholds (60, 65, 70, 75) used during data generation. This is what the company was doing before learning began.
+
+The notebook prints these metrics before the online phase starts. Use them as the floor: the algorithm should exceed this baseline in precision and recall while reducing cost per hire.
+
+---
+
 ## Reading the Batch Report
 
 ```
@@ -85,19 +101,3 @@ The `--cost-weight` parameter shifts the balance:
 - `cost/hire` — total cost divided by number of hires in this batch
 
 Total cost falling while precision rises = algorithm is working.
-
----
-
-## Baseline
-
-Before running the online algorithm, measure the **naive policy** — the fixed thresholds (60, 65, 70, 75) used during data generation. This is what the company was doing before learning began.
-
-The notebook prints these metrics before the online phase starts. Use them as the floor: the algorithm should exceed this baseline in precision and recall while reducing cost per hire.
-
----
-
-## Ground Truth
-
-`ground_truth_hire = 1` for the top 25% of candidates by `true_quality`. The algorithm never sees `true_quality` — it only sees noisy stage scores.
-
-Precision and recall are computed by comparing the algorithm's decisions against this hidden ground truth. This is standard offline evaluation: ground truth is used only by the evaluator, never by the algorithm. The algorithm learns purely from `outcome` (1 if it hired a truly good candidate, 0 otherwise).

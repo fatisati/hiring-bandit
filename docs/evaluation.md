@@ -76,6 +76,17 @@ The `--cost-weight` parameter shifts the balance:
 | 0.01 (default) | mild cost pressure — a good hire through all stages still earns +0.73 reward |
 | ≥ 0.04 | good hires through all stages turn negative — algorithm learns to reject everyone early; recall collapses |
 
+### Why higher cost_weight can increase cost per hire
+
+`cost_weight` penalises **total hours spent** — on every candidate, hired or rejected. A higher value pushes the algorithm to reject candidates earlier (at s0, cost = 1 hr) to reduce total cost. But the candidates who do get hired still go through all stages (27 hrs). If the algorithm rejects more people at cheap stages, the number of hires drops — and since total cost doesn't drop proportionally, cost per hire rises.
+
+In short: `cost_weight` optimises total cost, not cost per hire. They are different objectives:
+
+| what you care about | what to optimise |
+|---|---|
+| total interviewer budget | penalise all candidates (current) |
+| efficiency per hire | penalise only hired candidates |
+
 ---
 
 ## Baseline

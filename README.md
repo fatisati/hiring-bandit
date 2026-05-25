@@ -83,6 +83,9 @@ reward = outcome - cost_weight × hours_spent
 
 A successful hire is always positive. The cost term creates mild pressure to identify and advance good candidates early — rather than routing everyone through all four expensive stages.
 
+**What `cost_weight` actually optimises — total cost, not cost per hire.**
+The penalty applies to every candidate processed, hired or rejected. This means the algorithm is incentivised to minimise total interviewer hours across the entire pool. A higher `cost_weight` causes the algorithm to reject more people early (cheap), which reduces total cost — but cost per hire may stay flat or even rise, because the candidates that do get hired still go through all stages. If minimising cost per hire is the priority instead, only penalising hired candidates would be the right objective.
+
 ---
 
 ## The Solution
@@ -248,6 +251,9 @@ We track three metrics per batch:
 |---|---|
 | precision | of candidates hired, how many were truly good? |
 | recall | of truly good candidates, how many did we hire? |
-| cost per hire | how many hours did we spend per successful hire? |
+| total cost | how many interviewer hours were spent on all candidates? |
+| cost per hire | how many hours were spent per successful hire? |
 
-A well-functioning algorithm shows precision and recall trending up, cost per hire trending down, and all three flattening as the algorithm converges.
+A well-functioning algorithm shows precision and recall trending up, total cost trending down, and all metrics flattening as the algorithm converges.
+
+Note that total cost and cost per hire can move in opposite directions — see the reward signal section above for why.
